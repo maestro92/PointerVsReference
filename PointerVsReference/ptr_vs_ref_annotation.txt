@@ -1,0 +1,281 @@
+So examined the following code in two compilers
+
+the following link gives awesome explanations
+https://stackoverflow.com/questions/21145171/c-references-and-pointers-at-the-compiler-level
+
+this links explains individual assembly commands
+http://www.cs.virginia.edu/~evans/cs216/guides/x86.html
+
+
+#include <iostream>
+using namespace std;
+
+int main(int num) {
+	int i = 10;
+	int *ptrToI = &i;
+	int &refToI = i;
+
+	cout << i << endl;
+	cout << &i << endl;
+
+	cout << ptrToI << endl;
+	cout << *ptrToI << endl;
+	cout << &ptrToI << endl;
+
+	cout << refToI << endl;
+	//cout << *refToI << endl;
+	cout << &refToI << endl;
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+x86-64 gcc 8.2 															Visual Studio Disassembly
+https://gcc.godbolt.org/
+
+main(int):
+
+>>>>>>>	push    rbp
+>>>>>>>	mov     rbp, rsp
+>>>>>>>	sub     rsp, 48
+>>>>>>>	mov     DWORD PTR [rbp-36], edi
+
+1.        	i = 10
+>>>>>>>	mov     DWORD PTR [rbp-12], 10									01231888  mov         dword ptr [i],0Ah 
+        
+
+2.			ptrToI = &i
+>>>>>>>	lea     rax, [rbp-12]											0123188F  lea         eax,[i] 
+>>>>>>>	mov     QWORD PTR [rbp-24], rax									01231892  mov         dword ptr [ptrToI],eax 
+
+
+3.			int &refToI = i;
+>>>>>>>	lea     rax, [rbp-12]											01231895  lea         eax,[i] 	
+>>>>>>>	mov     QWORD PTR [rbp-8], rax									01231898  mov         dword ptr [refToI],eax  
+        
+
+4.			cout << i << endl;
+>>>>>>> mov     eax, DWORD PTR [rbp-12] 								012318A4  mov         eax,dword ptr [i]  
+
+
+5.			cout << &i << endl;
+>>>>>>> lea     rax, [rbp-12]											012318D3  lea         eax,[i]  
+
+
+6.			cout << ptrToI << endl;
+>>>>>>>	mov     rax, QWORD PTR [rbp-24]									01231902  mov         eax,dword ptr [ptrToI]
+		
+
+7.			cout << *ptrToI << endl;
+>>>>>>>	mov     rax, QWORD PTR [rbp-24]									01231931  mov         eax,dword ptr [ptrToI]  
+>>>>>>>	mov     eax, DWORD PTR [rax]									01395A9A  mov         ecx,dword ptr [eax] 
+
+
+8.			cout << &ptrToI << endl;
+>>>>>>> lea     rax, [rbp-24]											01231962  lea         eax,[ptrToI]  
+
+
+9.			cout << refToI << endl;
+>>>>>>>	mov     rax, QWORD PTR [rbp-8] 									01231991  mov         eax,dword ptr [refToI]  
+>>>>>>>	mov     eax, DWORD PTR [rax]									01395B0A  mov         ecx,dword ptr [eax]
+
+
+			//cout << *refToI << endl;
+10.			cout << &refToI << endl;
+>>>>>>>	mov     rax, QWORD PTR [rbp-8] 									012319C2  mov         eax,dword ptr [refToI]  
+
+
+>>>>>>> mov     eax, DWORD PTR [rbp-12]
+        
+>>>>>>> pop     rbp
+>>>>>>> ret
+
+
+
+
+
+Output of this code is like this
+
+	i = 10
+	&i = 0076FD58
+	ptrToI = 0076FD58
+	*ptrToI = 10
+	&ptrToI = 0076FD4C
+	refToI = 10
+	&refToI = 0076FD58
+
+
+
+
+
+
+
+ebp/rbp 
+is the base pointer 
+
+rbp points to the value of our base 
+
+
+
+-	"dword ptr" means the size of the target operand is 32 bits
+
+-	0ah is equivalent to 10 in decimal 
+
+-	"[]"
+[L1] means memory content at address L1
+
+
+-	"lea"
+
+lea <reg32>,<mem address>
+
+Load effective address
+places the address specified by its second operand into the register by its first operand.
+Note. the contents of the memory location are not loaded, only the address. This is useful for obtaining a pointer into a memroy region
+
+LEA accepts a standard memory addressing oeprand, but does nothing more than store the calculated memory offset in the specified register
+
+
+
+
+
+
+-	Difference between "lea" and "Mov"
+
+apparently "[]" works differently in the lea command. that is the only exception
+
+		mov eax, [ebp - 4];			
+
+"[]" indicates that the value of ebp - 4 is taken as a memory address, and We get the content and put it in eax
+
+you can think of it this way:
+"[]" in a mov command, returns a value 
+the value is the content at memory addres ebp - 4
+
+so this becomes 
+
+		mov eax, content_at ebp - 4
+
+
+		
+		lea eax, [ebp - 4];			
+as we mentioned "[]" works different here. 
+"[]" returns an address. 
+
+so this becomes 
+
+		lea eax, some_adderess_calcualted_based_on ebp - 4
+
+
+
+TL:DR 
+"[]" in a mov command, returns a value 
+"[]" in a lea command, returns an address
+
+
+https://stackoverflow.com/questions/1658294/whats-the-purpose-of-the-lea-instruction
+
+https://stackoverflow.com/questions/2030366/what-do-the-brackets-mean-in-x86-asm
+
+https://stackoverflow.com/questions/1699748/what-is-the-difference-between-mov-and-lea/1699778#1699778
+
+
+
+
+1.        	i = 10
+>>>>>>>	mov     DWORD PTR [rbp-12], 10	
+
+means putting 10 at address [rbp-12]
+our local variable i, resides in rbp-12.
+on the visual studio side, [i] is essentially [rbp-12]. I think in visual studio [i] confused me at first...
+now i know it means address of variable i.
+
+
+2.			ptrToI = &i
+>>>>>>>	lea     rax, [rbp-12]
+>>>>>>>	mov     QWORD PTR [rbp-24], rax
+
+puts the address of the variable i (which is residing in rbp-12) onto rax 
+I initially ahd the question: is address of i just rbp-12?
+then I figured the true memory address of i, is just some memory address that is calculated based on rbp-12. there could be an offset or what not.
+
+
+puts the content of rax into memory at address rbp - 8
+
+address rbp - 8 has our local variable "ptrToI". this way "ptrToI" points to "i" now
+
+
+
+3.			int &refToI = i;
+>>>>>>>	lea     rax, [rbp-12]								  		
+>>>>>>>	mov     QWORD PTR [rbp-16], rax 
+
+same thing. But the thing to note is that compare section2 and section3, [rbp-8] is replaced by [rbp-16]
+this is putting special_address(rbp - 12), into the memory at address rbp - 16
+
+
+which means refToNum does occupy memory. In this case, its the stack memory, since we have a local variable.
+this means a reference takes as much memory as a pointer does. 
+
+
+
+
+Let us look at how to access values in it 
+Since we have 
+		*ptrToI = 10
+		refToI = 10
+
+"*ptrToI" and "refToI" prints out the same value, let us compare disassembly 7 and 9
+
+
+7.			cout << *ptrToI << endl;
+>>>>>>>	mov     rax, QWORD PTR [rbp-24]									01231931  mov         eax,dword ptr [ptrToI]  
+>>>>>>>	mov     eax, DWORD PTR [rax]									01395A9A  mov         ecx,dword ptr [eax] 
+
+
+9.			cout << refToI << endl;
+>>>>>>>	mov     rax, QWORD PTR [rbp-8] 									01231991  mov         eax,dword ptr [refToI]  
+>>>>>>>	mov     eax, DWORD PTR [rax]									01395B0A  mov         ecx,dword ptr [eax]
+
+
+as you can see the two are the same 
+both are doing 
+put the content at address rbp-24 to rax, which is the address of variable i (or rbp-12 in this case)
+put the content at address rbp-12 to eax
+
+
+put the content at address rbp-8 to rax, which is the addresss of variable i (or rbp-12 in this case)
+put the content at address rbp-12 to eax
+
+
+
+
+Similarly, let us look at because
+
+		ptrToI = 0076FD58
+
+		&refToI = 0076FD58
+
+
+6.			cout << ptrToI << endl;
+>>>>>>>	mov     rax, QWORD PTR [rbp-24]									01231902  mov         eax,dword ptr [ptrToI]
+		
+
+10.			cout << &refToI << endl;
+>>>>>>>	mov     rax, QWORD PTR [rbp-8] 									012319C2  mov         eax,dword ptr [refToI]  
+
+
+as you can see the code is exactly the same again.
+I personally have never seen &refToI in code :(
+
+
+
+
+
+

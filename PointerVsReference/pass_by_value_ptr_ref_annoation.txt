@@ -1,0 +1,249 @@
+So examined the following code in two compilers
+
+inspired by
+https://stackoverflow.com/questions/19858980/how-does-assembly-do-parameter-passing-by-value-reference-pointer-for-differe
+
+this links explains individual assembly commands
+http://www.cs.virginia.edu/~evans/cs216/guides/x86.html
+
+
+				#include <iostream>
+				using namespace std;
+
+
+				void passByValue(int i, char c, int* p, float f)
+				{
+					cout << "i = " << i << "\n";
+					cout << "c = " << c << "\n";
+
+					cout << "p = " << p << "\n";
+					cout << "f = " << f << "\n";
+				}
+
+
+				void passByReference(int& i, char& c, int* & p, float& f)
+				{
+					cout << "i = " << i << "\n";
+					cout << "c = " << c << "\n";
+
+					cout << "p = " << p << "\n";
+					cout << "f = " << f << "\n";
+				}
+
+
+				void passByPointer(int* i, char* c, int** p, float* f)
+				{
+					cout << "*i = " << *i << "\n";
+					cout << "*c = " << *c << "\n";
+
+					cout << "*p = " << *p << "\n";
+					cout << "*f = " << *f << "\n";
+				}
+
+
+				int main(int argc, char *argv[])
+				{	
+					int i = 1;
+					char c = 'a';
+					int* p = &i;
+					float f = 1.1;
+
+					passByValue(i, c, p, f);
+					passByReference(i, c, p, f);
+					passByPointer(&i, &c, &p, &f);
+					return 0;
+				}
+
+
+
+
+
+
+Below is the assembly code produced by visual studio
+
+					passByValue(i, c, p, f);
+				011963E6  push        ecx  
+				011963E7  movss       xmm0,dword ptr [f]  
+				011963EC  movss       dword ptr [esp],xmm0  
+				011963F1  mov         eax,dword ptr [p]  
+				011963F4  push        eax  
+				011963F5  movzx       ecx,byte ptr [c]  
+				011963F9  push        ecx  
+				011963FA  mov         edx,dword ptr [i]  
+				011963FD  push        edx  
+				011963FE  call        passByValue
+
+
+					passByReference(i, c, p, f);
+				01196406  lea         eax,[f]  
+				01196409  push        eax  
+				0119640A  lea         ecx,[p]  
+				0119640D  push        ecx  
+				0119640E  lea         edx,[c]  
+				01196411  push        edx  
+				01196412  lea         eax,[i]  
+				01196415  push        eax  
+				01196416  call        passByReference (0119142Eh)  
+				0119641B  add         esp,10h 
+
+
+					passByPointer(&i, &c, &p, &f);
+				0119641E  lea         eax,[f]  
+				01196421  push        eax  
+				01196422  lea         ecx,[p]  
+				01196425  push        ecx  
+				01196426  lea         edx,[c]  
+				01196429  push        edx  
+				0119642A  lea         eax,[i]  
+				0119642D  push        eax  
+				0119642E  call        passByPointer (01191429h)  
+				01196433  add         esp,10h  
+
+
+as you can see the when we are calling passByReference and passByPointer, 
+and pushing the arguments on to the stack, we are just pushing the addresses 
+
+			lea         eax,[f] 
+			lea         ecx,[p]  
+			lea         edx,[c] 
+			lea         eax,[i] 
+
+where as in passByValue, we are pushing actual values.
+
+so reference and pointer doesnot differ 
+
+
+
+
+
+
+#########################################################
+###################### passByValue ######################
+#########################################################
+
+
+				void passByValue(int i, char c, int* p, float f)
+				{
+
+				...
+				...
+					cout << "i = " << i << "\n";
+				00F062B5  mov         eax,dword ptr [i]  
+				00F062B8  push        eax  
+				...
+				...
+					cout << "c = " << c << "\n";
+				...
+
+				00F062EA  movzx       eax,byte ptr [c]  
+				...
+				...
+
+					cout << "p = " << p << "\n";
+				00F06315  push        offset string "\n" (0F090D0h)  
+				00F0631A  mov         esi,esp  
+				00F0631C  mov         eax,dword ptr [p]  
+				...
+				...
+
+					cout << "f = " << f << "\n";
+				...
+				00F06354  movss       xmm0,dword ptr [f]  
+				00F06359  movss       dword ptr [esp],xmm0  
+				...
+				...
+				}
+
+
+
+
+
+#########################################################
+#################### passByReference ####################
+#########################################################
+
+
+				void passByReference(int& i, char& c, int* & p, float& f)
+				{
+
+				...
+				...
+
+					cout << "i = " << i << "\n";
+				01195A25  mov         eax,dword ptr [i]  
+				01195A28  mov         ecx,dword ptr [eax]  
+	
+				...
+				...
+
+					cout << "c = " << c << "\n";
+				01195A5C  mov         eax,dword ptr [c]  
+				01195A5F  movzx       ecx,byte ptr [eax]  
+	
+				...
+				...
+
+					cout << "p = " << p << "\n";
+				01195A90  mov         eax,dword ptr [p]  
+				01195A93  mov         ecx,dword ptr [eax]  
+	
+				...
+				...
+
+					cout << "f = " << f << "\n";
+				01195AC9  mov         eax,dword ptr [f]  
+	
+				01195ACD  movss       xmm0,dword ptr [eax]  
+				01195AD1  movss       dword ptr [esp],xmm0  
+
+				...
+				...
+				}
+
+
+
+
+
+
+#########################################################
+##################### passByPointer #####################
+#########################################################
+
+
+
+				void passByPointer(int* i, char* c, int** p, float* f)
+				{
+				...
+				...
+
+					cout << "*i = " << i << "\n";
+				00F02395  mov         eax,dword ptr [i]  
+				00F02398  mov         ecx,dword ptr [eax]  
+				...
+				...
+
+					cout << "*c = " << c << "\n";
+				00F023CC  mov         eax,dword ptr [c]  
+				00F023CF  movzx       ecx,byte ptr [eax] 
+				...
+				...
+
+					cout << "*p = " << p << "\n";
+				00F02400  mov         eax,dword ptr [p]  
+				00F02403  mov         ecx,dword ptr [eax] 
+				...
+				...
+
+					cout << "*f = " << f << "\n";
+				00F02439  mov         eax,dword ptr [f]  
+
+				00F0243D  movss       xmm0,dword ptr [eax]  
+				00F02441  movss       dword ptr [esp],xmm0  
+				...
+				...
+				}
+
+as you can see the passByReference and passByPointer are exactly the same. Both of them differ with passByValue case
+
+
+
