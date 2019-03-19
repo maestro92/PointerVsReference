@@ -25,7 +25,6 @@ void passByValue(int i, char c, int* p, float f)
 	cout << "f = " << f << "\n";
 }
 
-
 void passByReference(int& i, char& c, int* & p, float& f)
 {
 	cout << "i = " << i << "\n";
@@ -35,6 +34,14 @@ void passByReference(int& i, char& c, int* & p, float& f)
 	cout << "f = " << f << "\n";
 }
 
+void passByConstReference(const int& i, const char& c, const int* & p, const float& f)
+{
+	cout << "i = " << i << "\n";
+	cout << "c = " << c << "\n";
+
+	cout << "p = " << p << "\n";
+	cout << "f = " << f << "\n";
+}
 
 void passByPointer(int* i, char* c, int** p, float* f)
 {
@@ -77,8 +84,11 @@ int main(int argc, char *argv[])
 	int* p = &i;
 	float f = 1.1;
 
+	const int* p1 = &i;
+
 	passByValue(i, c, p, f);
 	passByReference(i, c, p, f);
+	passByConstReference(i, c, p1, f);
 	passByPointer(&i, &c, &p, &f);
 	return 0;
 }
